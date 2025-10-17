@@ -125,7 +125,7 @@ jobs:
       # Step 5: Build and Push Docker image
       - name: Build and Push Docker image
         run: |
-          IMAGE=asia-south2-docker.pkg.dev/mlops-project-v1/mlops-project/streamlit-app:latest
+          IMAGE=asia-south2-docker.pkg.dev/mlops-project-v1/mlops-project-v1/streamlit-app:latest
           docker build -t $IMAGE .
           docker push $IMAGE
 
@@ -133,7 +133,7 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy streamlit-app \
-            --image asia-south2-docker.pkg.dev/mlops-project-v1/mlops-project/streamlit-app:latest \
+            --image asia-south2-docker.pkg.dev/mlops-project-v1/mlops-project-v1/streamlit-app:latest \
             --region asia-south2 \
             --platform managed \
             --allow-unauthenticated
