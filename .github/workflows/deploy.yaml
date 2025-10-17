@@ -1,10 +1,90 @@
-name: Deploy to Google Cloud Run
+# name: Deploy to Google Cloud Run
 
-# -------------------------------------------------------------
-# This GitHub Actions workflow automatically builds your Docker
-# image, pushes it to Google Artifact Registry, and deploys
-# your Streamlit app to Google Cloud Run (Delhi region).
-# -------------------------------------------------------------
+# # -------------------------------------------------------------
+# # This GitHub Actions workflow automatically builds your Docker
+# # image, pushes it to Google Artifact Registry, and deploys
+# # your Streamlit app to Google Cloud Run (Delhi region).
+# # -------------------------------------------------------------
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     # Required to allow GitHub Actions to read repo contents
+#     permissions:
+#       contents: read
+
+#     steps:
+#       # ---------------------------------------------------------
+#       # Step 1: Checkout repository
+#       # ---------------------------------------------------------
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       # ---------------------------------------------------------
+#       # Step 2: Set up Google Cloud SDK
+#       # ---------------------------------------------------------
+#       - name: Set up Google Cloud SDK
+#         uses: google-github-actions/setup-gcloud@v2
+#         with:
+#           project_id: ${{ secrets.GCP_PROJECT_ID }}
+#           service_account_key: ${{ secrets.GCP_SA_KEY }}
+#           export_default_credentials: true
+
+#       # ---------------------------------------------------------
+#       # Step 3: Authenticate Docker to Google Artifact Registry
+#       # ---------------------------------------------------------
+#       - name: Configure Docker authentication
+#         run: |
+#           gcloud auth configure-docker asia-south2-docker.pkg.dev --quiet
+
+#       # ---------------------------------------------------------
+#       # Step 4: Build Docker image
+#       # A unique timestamp tag ensures every deployment is versioned.
+#       # ---------------------------------------------------------
+#       - name: Build Docker image
+#         run: |
+#           IMAGE_NAME="mlops-app"
+#           IMAGE_TAG=$(date +%Y%m%d%H%M%S)
+#           IMAGE_URI="asia-south2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.AR_REPO }}/${IMAGE_NAME}:${IMAGE_TAG}"
+#           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+#           docker build -t "$IMAGE_URI" .
+
+#       # ---------------------------------------------------------
+#       # Step 5: Push Docker image to Artifact Registry
+#       # ---------------------------------------------------------
+#       - name: Push Docker image
+#         run: |
+#           docker push "$IMAGE_URI"
+
+#       # ---------------------------------------------------------
+#       # Step 6: Deploy image to Google Cloud Run
+#       # ---------------------------------------------------------
+#       - name: Deploy to Cloud Run
+#         run: |
+#           gcloud run deploy ${{ secrets.SERVICE_NAME }} \
+#             --image "$IMAGE_URI" \
+#             --region asia-south2 \
+#             --platform managed \
+#             --allow-unauthenticated \
+#             --port 8080
+
+#       # ---------------------------------------------------------
+#       # Step 7: Display deployed service URL in GitHub Actions logs
+#       # ---------------------------------------------------------
+#       - name: Get Cloud Run service URL
+#         run: |
+#           echo "Fetching deployed service URL..."
+#           gcloud run services describe ${{ secrets.SERVICE_NAME }} \
+#             --region asia-south2 \
+#             --format 'value(status.url)'
+
+name: Deploy Streamlit App to Cloud Run
 
 on:
   push:
@@ -15,38 +95,33 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    # Required to allow GitHub Actions to read repo contents
+    # Required permissions for gcloud auth and artifact registry
     permissions:
       contents: read
+      id-token: write
 
     steps:
-      # ---------------------------------------------------------
       # Step 1: Checkout repository
-      # ---------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ---------------------------------------------------------
-      # Step 2: Set up Google Cloud SDK
-      # ---------------------------------------------------------
+      # Step 2: Authenticate with Google Cloud using the service account key
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Step 3: Install Google Cloud SDK
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
 
-      # ---------------------------------------------------------
-      # Step 3: Authenticate Docker to Google Artifact Registry
-      # ---------------------------------------------------------
+      # Step 4: Authenticate Docker for Artifact Registry
       - name: Configure Docker authentication
-        run: |
-          gcloud auth configure-docker asia-south2-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker asia-south2-docker.pkg.dev --quiet
 
-      # ---------------------------------------------------------
-      # Step 4: Build Docker image
-      # A unique timestamp tag ensures every deployment is versioned.
-      # ---------------------------------------------------------
+      # Step 5: Build Docker image
       - name: Build Docker image
         run: |
           IMAGE_NAME="mlops-app"
@@ -55,16 +130,11 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           docker build -t "$IMAGE_URI" .
 
-      # ---------------------------------------------------------
-      # Step 5: Push Docker image to Artifact Registry
-      # ---------------------------------------------------------
+      # Step 6: Push Docker image to Artifact Registry
       - name: Push Docker image
-        run: |
-          docker push "$IMAGE_URI"
+        run: docker push "$IMAGE_URI"
 
-      # ---------------------------------------------------------
-      # Step 6: Deploy image to Google Cloud Run
-      # ---------------------------------------------------------
+      # Step 7: Deploy image to Google Cloud Run
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ secrets.SERVICE_NAME }} \
@@ -74,15 +144,12 @@ jobs:
             --allow-unauthenticated \
             --port 8080
 
-      # ---------------------------------------------------------
-      # Step 7: Display deployed service URL in GitHub Actions logs
-      # ---------------------------------------------------------
+      # Step 8: Output the deployed service URL
       - name: Get Cloud Run service URL
         run: |
           echo "Fetching deployed service URL..."
           gcloud run services describe ${{ secrets.SERVICE_NAME }} \
             --region asia-south2 \
             --format 'value(status.url)'
-
 
 
