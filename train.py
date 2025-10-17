@@ -40,6 +40,7 @@ def log_dataset(filepath="customer_churn.csv"):
     """
     Loads, cleans the data, and logs it as a W&B Artifact.
     Returns the cleaned feature matrix (X) and target vector (y).
+    This is just a dummy text to be deleted. 
     """
     print(f"\n1. Logging Dataset as W&B Artifact from {filepath}...")
     try:
