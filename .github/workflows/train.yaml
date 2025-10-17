@@ -1,0 +1,96 @@
+name: Train Model on Push
+
+# -------------------------------------------------------------
+# This GitHub Actions workflow automatically trains your ML model
+# on every push to the main branch. It commits each new model file
+# with a timestamped name and uploads it as an artifact.
+# -------------------------------------------------------------
+
+on:
+  push:
+    branches:
+      - main  # Add other branches like "dev" if needed
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    # Allow GitHub Actions to push commits to the repository
+    permissions:
+      contents: write
+
+    steps:
+      # ---------------------------------------------------------
+      # Step 1: Checkout the repository so code is available.
+      # ---------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------
+      # Step 2: Set up Python 3.10 for training.
+      # ---------------------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # ---------------------------------------------------------
+      # Step 3: Install required Python dependencies.
+      # ---------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          # Ensure all critical ML dependencies are installed
+          pip install wandb==0.22.2 scikit-learn==1.7.2 pandas==2.3.2 numpy==2.2.4 joblib streamlit==1.49.1
+          echo "Dependencies installed successfully."
+
+      # ---------------------------------------------------------
+      # Step 4: Configure Weights & Biases.
+      # The API key should be stored securely as a GitHub secret.
+      # ---------------------------------------------------------
+      - name: Configure Weights & Biases
+        env:
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+        run: |
+          echo "Weights & Biases configured."
+
+      # ---------------------------------------------------------
+      # Step 5: Run the model training script.
+      # The script will produce a timestamped model file under models/.
+      # ---------------------------------------------------------
+      - name: Run training script
+        env:
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+        run: |
+          python train.py
+
+      # ---------------------------------------------------------
+      # Step 6: Commit and push all trained model files.
+      # Each training run creates a new timestamped .pkl file,
+      # so Git will always detect and commit new model versions.
+      # ---------------------------------------------------------
+      - name: Commit and push trained models
+        run: |
+          if [ -d models ]; then
+            echo "Model directory found. Preparing to commit..."
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add -f models/
+            git commit -m "Auto-commit new trained model on $(date '+%Y-%m-%d %H:%M:%S')" || echo "No new models to commit."
+            git push origin main || echo "Push skipped (no permission or branch protection)."
+          else
+            echo "Model directory not found."
+          fi
+
+      # ---------------------------------------------------------
+      # Step 7: Upload all models as workflow artifacts.
+      # You can download them directly from the GitHub Actions UI.
+      # ---------------------------------------------------------
+      - name: Upload trained model artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained_models
+          path: models/
+          if-no-files-found: warn
