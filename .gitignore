@@ -135,7 +135,7 @@ celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
-
+lustrous-cubist-475318-f3-2ebde98e8760.json
 # Environments
 .env
 .envrc
